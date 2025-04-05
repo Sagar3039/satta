@@ -54,21 +54,7 @@ const InfoSection = () => {
           </Card>
         </div>
         
-        <div className="flex flex-wrap justify-center gap-8 text-center">
-            <div className="p-6 glass-card">
-              <h3 className="text-xl font-semibold text-white mb-2">Fast Results</h3>
-              <p className="text-gray-400">Get the latest results instantly</p>
-            </div>
-            <div className="p-6 glass-card">
-              <h3 className="text-xl font-semibold text-white mb-2">24/7 Support</h3>
-              <p className="text-gray-400">Betting assistance anytime</p>
-            </div>
-            <div className="p-6 glass-card">
-              <h3 className="text-xl font-semibold text-white mb-2">Secure Betting</h3>
-              <p className="text-gray-400">Safe and reliable platform</p>
-            </div>
-          </div>
-      </div>
+        </div>
     </section>
   );
 };

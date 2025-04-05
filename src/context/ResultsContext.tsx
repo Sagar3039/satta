@@ -1,113 +1,76 @@
+// context/ResultsContext.tsx
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { db } from '@/lib/firebase';
+import { onSnapshot, doc, collection, setDoc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 
-import { createContext, useContext, useState, useEffect } from 'react';
-import { getLatestResults, addResult as addFirestoreResult, updateResult as updateFirestoreResult, deleteResult as deleteFirestoreResult } from '@/services/firestore';
-import { useToast } from '@/hooks/use-toast';
-
-type Result = {
-  id?: string;
-  gameId: string;
-  value: string;
+interface Result {
   date: string;
-  timestamp?: Date;
-};
+  value: string;
+}
 
-type ResultsContextType = {
+interface GameData {
+  name: string;
   results: Result[];
-  loading: boolean;
-  addResult: (gameId: string, date: string, value: string) => Promise<void>;
-  updateResult: (id: string, gameId: string, date: string, value: string) => Promise<void>;
-  deleteResult: (id: string) => Promise<void>;
-};
+}
 
-const ResultsContext = createContext<ResultsContextType | null>(null);
+interface ResultsContextType {
+  results: Record<string, GameData>;
+  addResult: (gameId: string, result: Result) => Promise<void>;
+}
 
-export const ResultsProvider = ({ children }: { children: React.ReactNode }) => {
-  const [results, setResults] = useState<Result[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+const ResultsContext = createContext<ResultsContextType | undefined>(undefined);
+
+export const ResultsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [results, setResults] = useState<Record<string, GameData>>({});
 
   useEffect(() => {
-    const fetchResults = async () => {
-      try {
-        const latestResults = await getLatestResults(10);
-        setResults(latestResults);
-      } catch (error) {
-        console.error('Error fetching results:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load results',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+    const unsubscribe = onSnapshot(collection(db, 'games'), (snapshot) => {
+      const data: Record<string, GameData> = {};
 
-    fetchResults();
-  }, [toast]);
+      // Game names mapping
+      const gameNames: Record<string, string> = {
+        "delhi-bazar": "Delhi Bazar",
+        "shree-ganes": "Shree Ganes",
+        "faridabad": "Faridabad",
+        "lucky-seven": "Lucky Seven",
+        "ghaziabad": "Ghaziabad",
+        "desawar": "Desawar",
+        "gali": "Gali",
+      };
 
-  const addResult = async (gameId: string, date: string, value: string) => {
-    try {
-      await addFirestoreResult({ gameId, date, value, timestamp: new Date(date) });
-      const latestResults = await getLatestResults(10);
-      setResults(latestResults);
-      toast({
-        title: 'Success',
-        description: 'Result added successfully',
-      });
-    } catch (error) {
-      console.error('Error adding result:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add result',
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
+      snapshot.forEach((docSnap) => {
+        const docData = docSnap.data();
+        const gameId = docSnap.id;
 
-  const updateResult = async (id: string, gameId: string, date: string, value: string) => {
-    try {
-      await updateFirestoreResult(id, { gameId, date, value });
-      const latestResults = await getLatestResults(10);
-      setResults(latestResults);
-      toast({
-        title: 'Success',
-        description: 'Result updated successfully',
+        data[gameId] = {
+          name: gameNames[gameId] || gameId,
+          results: docData.results || [],
+        };
       });
-    } catch (error) {
-      console.error('Error updating result:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update result',
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
 
-  const deleteResult = async (id: string) => {
-    try {
-      await deleteFirestoreResult(id);
-      const latestResults = await getLatestResults(10);
-      setResults(latestResults);
-      toast({
-        title: 'Success',
-        description: 'Result deleted successfully',
+      setResults(data);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const addResult = async (gameId: string, result: Result) => {
+    const gameRef = doc(db, 'games', gameId);
+
+    const gameDoc = await getDoc(gameRef);
+    if (gameDoc.exists()) {
+      await updateDoc(gameRef, {
+        results: arrayUnion(result),
       });
-    } catch (error) {
-      console.error('Error deleting result:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete result',
-        variant: 'destructive',
+    } else {
+      await setDoc(gameRef, {
+        results: [result],
       });
-      throw error;
     }
   };
 
   return (
-    <ResultsContext.Provider value={{ results, loading, addResult, updateResult, deleteResult }}>
+    <ResultsContext.Provider value={{ results, addResult }}>
       {children}
     </ResultsContext.Provider>
   );
@@ -115,7 +78,7 @@ export const ResultsProvider = ({ children }: { children: React.ReactNode }) => 
 
 export const useResults = () => {
   const context = useContext(ResultsContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useResults must be used within a ResultsProvider');
   }
   return context;

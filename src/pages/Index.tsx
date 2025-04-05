@@ -4,7 +4,7 @@ import HeroSection from "@/components/HeroSection";
 import FeaturedGames from "@/components/FeaturedGames";
 import LatestResults from "@/components/LatestResults";
 import InfoSection from "@/components/InfoSection";
-// import CTASection from "@/components/CTASection";
+import CTASection from "@/components/CTASection";
 
 const Index = () => {
   return (
@@ -13,7 +13,7 @@ const Index = () => {
       <FeaturedGames />
       <LatestResults />
       <InfoSection />
-      {/* <CTASection /> */}
+      <CTASection />
     </MainLayout>
   );
 };

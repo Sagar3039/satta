@@ -1,65 +1,48 @@
-
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
+// 📁 src/components/ResultsTable.tsx
+import React from "react";
+import { useGameManagement } from "@/context/GameManagementContext";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
-import { GAMES } from "./ResultForm";
-import { useGameManagement } from "./GameManagementContext";
 
 const ResultsTable = () => {
   const { results, handleEdit, handleDelete } = useGameManagement();
 
-  const getGameName = (gameId: string) => {
-    const game = GAMES.find(g => g.id === gameId);
-    return game ? game.name : gameId;
-  };
-
   return (
-    <Table>
-      <TableHeader>
-        <TableRow className="bg-black/30">
-          <TableHead className="text-white font-semibold">Game</TableHead>
-          <TableHead className="text-white font-semibold">Date</TableHead>
-          <TableHead className="text-white font-semibold">Result</TableHead>
-          <TableHead className="text-white font-semibold text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {results.map((result) => (
-          <TableRow key={result.id} className="border-b border-white/10">
-            <TableCell className="text-gray-400">{getGameName(result.gameId)}</TableCell>
-            <TableCell className="text-gray-400">{result.date}</TableCell>
-            <TableCell>
-              <span className="text-gold font-semibold">{result.value}</span>
-            </TableCell>
-            <TableCell className="text-right">
-              <div className="flex justify-end gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => handleEdit(result)}
-                >
-                  <Edit className="h-4 w-4" />
+    <div className="overflow-x-auto">
+      <table className="w-full table-auto border-collapse border border-white/10">
+        <thead className="bg-white/10">
+          <tr>
+            <th className="border border-white/10 px-4 py-2 text-left">Game ID</th>
+            <th className="border border-white/10 px-4 py-2 text-left">Date</th>
+            <th className="border border-white/10 px-4 py-2 text-left">Value</th>
+            <th className="border border-white/10 px-4 py-2 text-left">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {results.map((result) => (
+            <tr key={result.id} className="border-t border-white/10">
+              <td className="border border-white/10 px-4 py-2">{result.gameId}</td>
+              <td className="border border-white/10 px-4 py-2">{result.date}</td>
+              <td className="border border-white/10 px-4 py-2">{result.value}</td>
+              <td className="border border-white/10 px-4 py-2 space-x-2">
+                <Button variant="outline" size="sm" onClick={() => handleEdit(result)}>
+                  Edit
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => handleDelete(result.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(result.id)}>
+                  Delete
                 </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+              </td>
+            </tr>
+          ))}
+          {results.length === 0 && (
+            <tr>
+              <td colSpan={4} className="text-center px-4 py-2">
+                No results found.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 };
 

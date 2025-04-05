@@ -1,115 +1,164 @@
-
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { useGameManagement } from "@/context/GameManagementContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { Calendar, Plus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useGameManagement } from "./GameManagementContext";
+import { Label } from "@/components/ui/label";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
-// Mock game data (in a real app, this would come from Firebase)
-export const GAMES = [
-  { id: "delhi-bazar", name: "Delhi Bazar" },
-  { id: "shree-ganes", name: "Shree Ganes" },
-  { id: "faridabad", name: "Faridabad" },
-  { id: "lucky-seven", name: "Lucky Seven" },
-  { id: "gaziyabad", name: "Gaziyabad" },
-  { id: "gali", name: "Gali" },
-  { id: "desawar", name: "Desawar" },
+const DEFAULT_GAMES = [
+  "Delhi bazar",
+  "Shree ganesh",
+  "Faridabad",
+  "Lucky seven",
+  "Gaziyabad",
+  "Gali ",
+  "Desawar",
 ];
 
 const ResultForm = () => {
-  const [selectedGame, setSelectedGame] = useState("");
-  const [date, setDate] = useState("");
-  const [value, setValue] = useState("");
-  const { toast } = useToast();
-  const { editingResult, handleAddResult, handleClearEditingResult } = useGameManagement();
+  const { handleAddResult, editingResult, handleClearEditingResult } =
+    useGameManagement();
 
-  // Set form values when editing a result
+  const [gameId, setGameId] = useState("");
+  const [date, setDate] = useState<Date | null>(null);
+  const [hour, setHour] = useState("2");
+  const [minute, setMinute] = useState("33");
+  const [ampm, setAmpm] = useState("PM");
+  const [value, setValue] = useState("");
+
   useEffect(() => {
     if (editingResult) {
-      setSelectedGame(editingResult.gameId);
-      setDate(editingResult.date);
+      setGameId(editingResult.gameId);
+      const fullDate = new Date(editingResult.date);
+      setDate(fullDate);
+
+      let h = fullDate.getHours();
+      let m = fullDate.getMinutes();
+      setHour(String(h % 12 || 12));
+      setMinute(String(m).padStart(2, "0"));
+      setAmpm(h >= 12 ? "PM" : "AM");
       setValue(editingResult.value);
     }
   }, [editingResult]);
 
-  const handleSubmit = () => {
-    if (!selectedGame || !date || !value) {
-      toast({
-        title: "Error",
-        description: "Please fill all fields",
-        variant: "destructive",
-      });
-      return;
-    }
+  const buildDateTime = (): Date | null => {
+    if (!date) return null;
+    const d = new Date(date);
+    let h = parseInt(hour, 10);
+    const m = parseInt(minute, 10);
+    if (ampm === "PM" && h !== 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    d.setHours(h, m);
+    return d;
+  };
 
-    handleAddResult(selectedGame, date, value);
-    
-    // Reset form
-    setSelectedGame("");
-    setDate("");
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const fullDate = buildDateTime();
+    if (!gameId || !fullDate || !value) return;
+
+    handleAddResult(gameId, fullDate.toISOString(), value);
+    setGameId("");
+    setDate(null);
+    setHour("2");
+    setMinute("33");
+    setAmpm("PM");
     setValue("");
     handleClearEditingResult();
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-white mb-2">Game</label>
-        <Select value={selectedGame} onValueChange={setSelectedGame}>
-          <SelectTrigger className="bg-black/60 border-white/20">
-            <SelectValue placeholder="Select Game" />
-          </SelectTrigger>
-          <SelectContent>
-            {GAMES.map(game => (
-              <SelectItem key={game.id} value={game.id}>
-                {game.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label htmlFor="game">Select Game</Label>
+        <select
+          id="game"
+          value={gameId}
+          onChange={(e) => setGameId(e.target.value)}
+          className="w-full p-2 bg-black/50 border border-white/10 rounded"
+          required
+        >
+          <option value="" disabled>
+            Select a game
+          </option>
+          {DEFAULT_GAMES.map((game) => (
+            <option key={game} value={game}>
+              {game}
+            </option>
+          ))}
+        </select>
       </div>
-      
+
       <div>
-        <label className="block text-white mb-2">Date</label>
-        <div className="relative">
-          <Input
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            placeholder="DD Month, YYYY"
-            className="bg-black/60 border-white/20 pl-10"
-          />
-          <Calendar className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-        </div>
-      </div>
-      
-      <div>
-        <label className="block text-white mb-2">Result Value</label>
-        <Input
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="e.g. 34"
-          className="bg-black/60 border-white/20"
+        <Label>Date</Label>
+        <DatePicker
+          selected={date}
+          onChange={(d: Date | null) => setDate(d)}
+          dateFormat="dd/MM/yyyy"
+          placeholderText="Select date"
+          className="w-full p-2 bg-black/50 border border-white/10 rounded"
+          required
         />
       </div>
-      
-      <div className="flex items-end">
-        <Button 
-          onClick={handleSubmit}
-          className="bg-gold hover:bg-gold/80 text-black w-full"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          {editingResult ? "Update Result" : "Add Result"}
-        </Button>
+
+      <div className="flex gap-2 items-end">
+        <div className="flex-1">
+          <Label>Hour</Label>
+          <select
+            value={hour}
+            onChange={(e) => setHour(e.target.value)}
+            className="w-full p-2 bg-black/50 border border-white/10 rounded"
+          >
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+              <option key={h}>{h}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex-1">
+          <Label>Minute</Label>
+          <select
+            value={minute}
+            onChange={(e) => setMinute(e.target.value)}
+            className="w-full p-2 bg-black/50 border border-white/10 rounded"
+          >
+            {Array.from({ length: 60 }, (_, i) =>
+              String(i).padStart(2, "0")
+            ).map((m) => (
+              <option key={m}>{m}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex-1">
+          <Label>AM / PM</Label>
+          <select
+            value={ampm}
+            onChange={(e) => setAmpm(e.target.value)}
+            className="w-full p-2 bg-black/50 border border-white/10 rounded"
+          >
+            <option>AM</option>
+            <option>PM</option>
+          </select>
+        </div>
       </div>
-    </div>
+
+      <div>
+        <Label htmlFor="value">Result Value</Label>
+        <Input
+          type="text"
+          id="value"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          required
+        />
+      </div>
+
+      <Button type="submit">
+        {editingResult ? "Update Result" : "Add Result"}
+      </Button>
+    </form>
   );
 };
 

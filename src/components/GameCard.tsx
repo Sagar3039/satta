@@ -71,7 +71,7 @@ const GameCard = ({ id, name, latestResult, resultTime, isLive = false, populari
                 : 'bg-secondary hover:bg-white/10 text-white'
             }`}
           >
-            Record chart
+            View Details
           </Button>
         </Link>
       </CardFooter>

@@ -6,7 +6,7 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { GameManagementProvider } from "./GameManagementContext";
+import { GameManagementProvider } from "../../context/GameManagementContext";
 import ResultForm from "./ResultForm";
 import BulkUpload from "./BulkUpload";
 import ResultsTable from "./ResultsTable";
