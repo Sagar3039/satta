@@ -29,12 +29,18 @@ export const GameManagementProvider: React.FC<{ children: ReactNode }> = ({ chil
   
   // Create a flat array of results from the context for display in the table
   const mapContextToResults = () => {
-    return contextResults.map(result => ({
-      id: result.id || `${result.gameId}-${result.date}-${result.value}`,
-      gameId: result.gameId,
-      date: result.date,
-      value: result.value
-    }));
+    const flatResults: Result[] = [];
+    Object.entries(contextResults).forEach(([gameId, game]) => {
+      game.results.forEach(result => {
+        flatResults.push({
+          id: `${gameId}-${result.date}-${result.value}`, // Creating a unique ID
+          gameId,
+          date: result.date,
+          value: result.value
+        });
+      });
+    });
+    return flatResults;
   };
   
   const [results, setResults] = useState<Result[]>(mapContextToResults());
@@ -44,37 +50,40 @@ export const GameManagementProvider: React.FC<{ children: ReactNode }> = ({ chil
     setResults(mapContextToResults());
   }, [contextResults]);
 
-  const handleAddResult = async (gameId: string, date: string, value: string) => {
-    try {
-      if (editingResult) {
-        // Update existing result in Firestore
-        await addResult(gameId, date, value);
-        // Update local state
-        const updatedResults = results.map(result => 
-          result.id === editingResult.id 
-            ? { ...result, gameId, date, value } 
-            : result
-        );
-        setResults(updatedResults);
-      } else {
-        // Add new result to Firestore
-        await addResult(gameId, date, value);
-        
-        // Update local state for the table
-        const newResultWithId = {
-          id: `${gameId}-${date}-${value}`,
-          gameId,
-          date,
-          value,
-        };
-        setResults([newResultWithId, ...results]);
-      }
-    } catch (error) {
-      console.error('Error adding/updating result:', error);
+  const handleAddResult = (gameId: string, date: string, value: string) => {
+    const newResult = {
+      date,
+      value,
+    };
+
+    if (editingResult) {
+      // Update existing result
+      const updatedResults = results.map(result => 
+        result.id === editingResult.id 
+          ? { ...result, gameId, date, value } 
+          : result
+      );
+      setResults(updatedResults);
       toast({
-        title: "Error",
-        description: "Failed to save result to database",
-        variant: "destructive",
+        title: "Success",
+        description: "Result updated successfully",
+      });
+    } else {
+      // Add new result to both local state and context
+      addResult(gameId, newResult);
+      
+      // Update local state for the table
+      const newResultWithId = {
+        id: `${gameId}-${date}-${value}`,
+        gameId,
+        date,
+        value,
+      };
+      setResults([newResultWithId, ...results]);
+      
+      toast({
+        title: "Success",
+        description: "Result added successfully",
       });
     }
   };

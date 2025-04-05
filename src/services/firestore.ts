@@ -9,7 +9,7 @@ import {
   query,
   where,
   orderBy,
-  limit,
+  limit as firestoreLimit,
   Timestamp,
   DocumentData
 } from 'firebase/firestore';
@@ -127,15 +127,15 @@ export const deleteResult = async (resultId: string): Promise<void> => {
   }
 };
 
-export const getLatestResults = async (limit: number = 10): Promise<GameResult[]> => {
+export const getLatestResults = async (limitCount: number = 10): Promise<GameResult[]> => {
   try {
-    if (limit < 1) {
+    if (limitCount < 1) {
       throw new Error('Limit must be a positive number');
     }
     const q = query(
       resultsCollection,
       orderBy('timestamp', 'desc'),
-      limit
+      firestoreLimit(limitCount)
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => {
@@ -155,7 +155,7 @@ export const getLatestResults = async (limit: number = 10): Promise<GameResult[]
   }
 };
 
-export const getGameResults = async (gameId: string, limit: number = 10): Promise<GameResult[]> => {
+export const getGameResults = async (gameId: string, limitCount: number = 10): Promise<GameResult[]> => {
   try {
     if (!gameId) {
       throw new Error('Game ID is required');
@@ -164,7 +164,7 @@ export const getGameResults = async (gameId: string, limit: number = 10): Promis
       resultsCollection,
       where('gameId', '==', gameId),
       orderBy('timestamp', 'desc'),
-      limit
+      firestoreLimit(limitCount)
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => {
@@ -209,8 +209,8 @@ export const getGameStatistics = async (gameId: string, days: number = 30) => {
     totalResults: results.length,
     frequency,
     mostFrequent: Object.entries(frequency)
-      .sort(([,a], [,b]) => b - a)[0],
+      .sort(([, a], [, b]) => b - a)[0],
     leastFrequent: Object.entries(frequency)
-      .sort(([,a], [,b]) => a - b)[0]
+      .sort(([, a], [, b]) => a - b)[0]
   };
 };

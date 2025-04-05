@@ -1,113 +1,102 @@
 
-import { createContext, useContext, useState, useEffect } from 'react';
-import { getLatestResults, addResult as addFirestoreResult, updateResult as updateFirestoreResult, deleteResult as deleteFirestoreResult } from '@/services/firestore';
-import { useToast } from '@/hooks/use-toast';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-type Result = {
-  id?: string;
-  gameId: string;
-  value: string;
+// Mock data - in a real app, this would come from Firebase
+const initialResults = {
+  "delhi-bazar": {
+    name: "Delhi Bazar",
+    results: [
+      { date: "04 April, 2025", value: "34" },
+      { date: "03 April, 2025", value: "52" },
+      { date: "02 April, 2025", value: "78" },
+      { date: "01 April, 2025", value: "19" },
+      { date: "31 March, 2025", value: "45" },
+    ]
+  },
+  "shree-ganes": {
+    name: "Shree Ganes",
+    results: [
+      { date: "04 April, 2025", value: "72" },
+      { date: "03 April, 2025", value: "23" },
+      { date: "02 April, 2025", value: "67" },
+      { date: "01 April, 2025", value: "82" },
+      { date: "31 March, 2025", value: "31" },
+    ]
+  },
+  "faridabad": {
+    name: "Faridabad",
+    results: [
+      { date: "03 April, 2025", value: "91" },
+      { date: "02 April, 2025", value: "45" },
+      { date: "01 April, 2025", value: "29" },
+      { date: "31 March, 2025", value: "73" },
+      { date: "30 March, 2025", value: "12" },
+    ]
+  },
+  "lucky-seven": {
+    name: "Lucky Seven",
+    results: [
+      { date: "03 April, 2025", value: "07" },
+      { date: "02 April, 2025", value: "77" },
+      { date: "01 April, 2025", value: "49" },
+      { date: "31 March, 2025", value: "21" },
+      { date: "30 March, 2025", value: "63" },
+    ]
+  },
+};
+
+interface Result {
   date: string;
-  timestamp?: Date;
-};
+  value: string;
+}
 
-type ResultsContextType = {
+interface GameResults {
+  name: string;
   results: Result[];
-  loading: boolean;
-  addResult: (gameId: string, date: string, value: string) => Promise<void>;
-  updateResult: (id: string, gameId: string, date: string, value: string) => Promise<void>;
-  deleteResult: (id: string) => Promise<void>;
-};
+}
 
-const ResultsContext = createContext<ResultsContextType | null>(null);
+interface ResultsContextType {
+  results: Record<string, GameResults>;
+  addResult: (gameId: string, newResult: Result) => void;
+}
 
-export const ResultsProvider = ({ children }: { children: React.ReactNode }) => {
-  const [results, setResults] = useState<Result[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+const ResultsContext = createContext<ResultsContextType | undefined>(undefined);
 
-  useEffect(() => {
-    const fetchResults = async () => {
-      try {
-        const latestResults = await getLatestResults(10);
-        setResults(latestResults);
-      } catch (error) {
-        console.error('Error fetching results:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load results',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
+export const ResultsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [results, setResults] = useState<Record<string, GameResults>>(initialResults);
+
+  const addResult = (gameId: string, newResult: Result) => {
+    setResults(prev => {
+      // If game exists, add to its results
+      if (prev[gameId]) {
+        // Create a new array with the new result at the beginning
+        const updatedResults = [newResult, ...prev[gameId].results];
+        
+        return {
+          ...prev,
+          [gameId]: {
+            ...prev[gameId],
+            results: updatedResults
+          }
+        };
       }
-    };
-
-    fetchResults();
-  }, [toast]);
-
-  const addResult = async (gameId: string, date: string, value: string) => {
-    try {
-      await addFirestoreResult({ gameId, date, value, timestamp: new Date(date) });
-      const latestResults = await getLatestResults(10);
-      setResults(latestResults);
-      toast({
-        title: 'Success',
-        description: 'Result added successfully',
-      });
-    } catch (error) {
-      console.error('Error adding result:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add result',
-        variant: 'destructive',
-      });
-      throw error;
-    }
+      
+      // If game doesn't exist yet (unlikely in this mock setup)
+      return prev;
+    });
   };
 
-  const updateResult = async (id: string, gameId: string, date: string, value: string) => {
-    try {
-      await updateFirestoreResult(id, { gameId, date, value });
-      const latestResults = await getLatestResults(10);
-      setResults(latestResults);
-      toast({
-        title: 'Success',
-        description: 'Result updated successfully',
-      });
-    } catch (error) {
-      console.error('Error updating result:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update result',
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const deleteResult = async (id: string) => {
-    try {
-      await deleteFirestoreResult(id);
-      const latestResults = await getLatestResults(10);
-      setResults(latestResults);
-      toast({
-        title: 'Success',
-        description: 'Result deleted successfully',
-      });
-    } catch (error) {
-      console.error('Error deleting result:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete result',
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
+  // In a real Firebase app, you would set up listeners here
+  // For example:
+  // useEffect(() => {
+  //   const unsubscribe = onSnapshot(collection(db, "results"), (snapshot) => {
+  //     // Update results based on firebase data
+  //   });
+  //   return () => unsubscribe();
+  // }, []);
 
   return (
-    <ResultsContext.Provider value={{ results, loading, addResult, updateResult, deleteResult }}>
+    <ResultsContext.Provider value={{ results, addResult }}>
       {children}
     </ResultsContext.Provider>
   );
@@ -115,7 +104,7 @@ export const ResultsProvider = ({ children }: { children: React.ReactNode }) => 
 
 export const useResults = () => {
   const context = useContext(ResultsContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useResults must be used within a ResultsProvider');
   }
   return context;
